@@ -1,9 +1,20 @@
 import streamlit as st
 from PIL import Image, ImageDraw, ImageFont
 import io
+import urllib.request
+import os
 
 st.set_page_config(page_title="中間チェックシート作成アプリ", layout="wide")
 st.title("📋 中間チェックシート自動生成アプリ")
+
+# 日本語フォントの自動ダウンロード処理
+FONT_PATH = "ipag.ttf"
+if not os.path.exists(FONT_PATH):
+    font_url = "https://github.com/google/fonts/raw/main/ofl/ipagothic/IPAGothic-Regular.ttf"
+    try:
+        urllib.request.urlretrieve(font_url, FONT_PATH)
+    except:
+        pass
 
 # サイドバー設定
 st.sidebar.header("⚙️ シート設定")
@@ -30,14 +41,20 @@ for i in range(3):
 # 画像生成処理
 img = Image.new("RGB", (1920, 1080), "#FFFFFF")
 draw = ImageDraw.Draw(img)
-font_large = font_mid = font_small = ImageFont.load_default()
+
+try:
+    font_large = ImageFont.truetype(FONT_PATH, 50)
+    font_mid = ImageFont.truetype(FONT_PATH, 35)
+    font_small = ImageFont.truetype(FONT_PATH, 25)
+except:
+    font_large = font_mid = font_small = ImageFont.load_default()
 
 draw.rectangle([20, 20, 1900, 1060], outline="#4A5568", width=12)
 draw.text((60, 50), grade_text, fill="#333333", font=font_mid)
 draw.rectangle([400, 40, 1520, 120], fill="#FEF9E7", outline="#F1C40F", width=6)
-draw.text((450, 50), f"{title_time}分ちゅうかんチェック！", fill="#D35400", font=font_large)
+draw.text((450, 52), f"{title_time}分ちゅうかんチェック！", fill="#D35400", font=font_large)
 draw.rectangle([550, 140, 1370, 200], fill="#FFFFFF", outline="#333333", width=4)
-draw.text((580, 148), main_question, fill="#2C3E50", font=font_mid)
+draw.text((580, 150), main_question, fill="#2C3E50", font=font_mid)
 
 col_width = 560
 start_x = 80
@@ -50,14 +67,13 @@ for i, col in enumerate(columns_data):
     arrow_x = x + col_width // 2
     draw.line([(arrow_x, 370), (arrow_x, 410)], fill="#7F8C8D", width=6)
     draw.rectangle([x, 420, x + col_width, 480], fill="#FFFFFF", outline=col["color"], width=4)
-    draw.text((x + 100, 430), "【こうやって変えよう】", fill=col["color"], font=font_small)
+    draw.text((x + 100, 435), "【こうやって変えよう】", fill=col["color"], font=font_small)
     draw.rectangle([x, 500, x + col_width, 740], fill="#FAFAFA", outline="#BDC3C7", width=3)
     draw.text((x + 20, 520), f"• {col['action1']}", fill="#2C3E50", font=font_mid)
     draw.rectangle([x, 760, x + col_width, 1000], fill="#FAFAFA", outline="#BDC3C7", width=3)
     draw.text((x + 20, 780), f"• {col['action2']}", fill="#2C3E50", font=font_mid)
 
-# エラー箇所を修正した表示
-st.image(img, use_container_width=True)
+st.image(img, use_column_width=True)
 buf = io.BytesIO()
 img.save(buf, format="PNG")
 st.download_button(label="📥 画像をダウンロード", data=buf.getvalue(), file_name="checklist.png", mime="image/png")
