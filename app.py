@@ -7,14 +7,14 @@ import os
 st.set_page_config(page_title="中間チェックシート作成アプリ", layout="wide")
 st.title("📋 中間チェックシート自動生成アプリ")
 
-# 日本語フォントの自動取得
+# 確実に動作する日本語フォント（IPAゴシック）のダウンロード
 FONT_PATH = "ipag.ttf"
-if not os.path.exists(FONT_PATH):
-    font_url = "https://github.com/google/fonts/raw/main/ofl/ipagothic/IPAGothic-Regular.ttf"
+if not os.path.exists(FONT_PATH) or os.path.getsize(FONT_PATH) < 1000:
+    font_url = "https://github.com/hyoshiok/ttf-ipafont/raw/master/ipag.ttf"
     try:
         urllib.request.urlretrieve(font_url, FONT_PATH)
-    except:
-        pass
+    except Exception as e:
+        st.warning(f"フォントのダウンロードに失敗しました: {e}")
 
 # サイドバー設定
 st.sidebar.header("⚙️ シート設定")
@@ -42,13 +42,16 @@ for i in range(3):
 img = Image.new("RGB", (1920, 1080), "#FFFFFF")
 draw = ImageDraw.Draw(img)
 
+# フォント読み込み処理
 try:
     font_large = ImageFont.truetype(FONT_PATH, 50)
     font_mid = ImageFont.truetype(FONT_PATH, 35)
     font_small = ImageFont.truetype(FONT_PATH, 25)
-except:
+except Exception as e:
+    st.error(f"日本語フォント読み込みエラー: {e}")
     font_large = font_mid = font_small = ImageFont.load_default()
 
+# 描画処理
 draw.rectangle([20, 20, 1900, 1060], outline="#4A5568", width=12)
 draw.text((60, 50), grade_text, fill="#333333", font=font_mid)
 draw.rectangle([400, 40, 1520, 120], fill="#FEF9E7", outline="#F1C40F", width=6)
