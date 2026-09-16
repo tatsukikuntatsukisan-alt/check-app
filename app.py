@@ -7,7 +7,7 @@ import os
 st.set_page_config(page_title="中間チェックシート作成アプリ", layout="wide")
 st.title("📋 中間チェックシート自動生成アプリ")
 
-# 日本語フォントの自動ダウンロード処理
+# 日本語フォントの自動取得
 FONT_PATH = "ipag.ttf"
 if not os.path.exists(FONT_PATH):
     font_url = "https://github.com/google/fonts/raw/main/ofl/ipagothic/IPAGothic-Regular.ttf"
@@ -38,7 +38,7 @@ for i in range(3):
     action2 = st.sidebar.text_input(f"行動案 2 (柱 {i+1})", "行動パターン 2", key=f"a2_{i}")
     columns_data.append({"label": label, "sub": sub, "action1": action1, "action2": action2, "color": default_states[i]["color"], "bg": default_states[i]["bg"]})
 
-# 画像生成処理
+# 画像作成処理
 img = Image.new("RGB", (1920, 1080), "#FFFFFF")
 draw = ImageDraw.Draw(img)
 
@@ -73,7 +73,7 @@ for i, col in enumerate(columns_data):
     draw.rectangle([x, 760, x + col_width, 1000], fill="#FAFAFA", outline="#BDC3C7", width=3)
     draw.text((x + 20, 780), f"• {col['action2']}", fill="#2C3E50", font=font_mid)
 
-st.image(img, use_column_width=True)
+st.image(img, use_container_width=True)
 buf = io.BytesIO()
 img.save(buf, format="PNG")
 st.download_button(label="📥 画像をダウンロード", data=buf.getvalue(), file_name="checklist.png", mime="image/png")
