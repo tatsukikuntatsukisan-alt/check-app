@@ -7,7 +7,7 @@ import os
 st.set_page_config(page_title="中間チェックシート作成アプリ", layout="wide")
 st.title("📋 中間チェックシート自動生成アプリ")
 
-# 手書き風・丸ゴシック（Rounded Mplus）の自動ダウンロード
+# 丸ゴシックフォントの取得
 FONT_PATH = "rounded-mplus.ttf"
 if not os.path.exists(FONT_PATH) or os.path.getsize(FONT_PATH) < 1000:
     font_url = "https://github.com/google/fonts/raw/main/ofl/mplusrounded1c/MPLUSRounded1c-Bold.ttf"
@@ -16,17 +16,21 @@ if not os.path.exists(FONT_PATH) or os.path.getsize(FONT_PATH) < 1000:
     except Exception as e:
         st.warning(f"フォント読み込み失敗: {e}")
 
-# サイドバー設定
-st.sidebar.header("⚙️ シート設定")
+# --- サイドバー設定 ---
+st.sidebar.header("⚙️ 基本設定")
 grade_text = st.sidebar.text_input("学年表記", "小学校3年生")
-title_time = st.sidebar.text_input("時間設定（分）", "15")
+title_text = st.sidebar.text_input("メインタイトル", "15分ちゅうかんチェック！")
 main_question = st.sidebar.text_input("中央の問い", "いまの自分は どんな感じ？")
+
+st.sidebar.markdown("---")
+st.sidebar.header("🖼️ 画像・イラスト設定")
+uploaded_teacher = st.sidebar.file_uploader("先生などのイラスト画像を差し込む (PNG/JPG)", type=["png", "jpg", "jpeg"])
 
 columns_data = []
 default_states = [
-    {"label": "【ノリノリ！】", "sub": "(スイスイ描ける)", "color": "#2980B9", "bg": "#EBF5FB", "header_bg": "#AED6F1"},
-    {"label": "【ちょっとストップ】", "sub": "(ちょっと迷っている)", "color": "#D35400", "bg": "#FEF5E7", "header_bg": "#FAD7A0"},
-    {"label": "【かなりピンチ！】", "sub": "(全然進まない…)", "color": "#C0392B", "bg": "#FDEDEC", "header_bg": "#F9EBEA"}
+    {"label": "【ノリノリ！】", "sub": "(スイスイ描ける)", "color": "#2980B9", "bg": "#EBF5FB", "header_bg": "#AED6F1", "icon": "smile"},
+    {"label": "【ちょっとストップ】", "sub": "(ちょっと迷っている)", "color": "#D35400", "bg": "#FEF5E7", "header_bg": "#FAD7A0", "icon": "star"},
+    {"label": "【かなりピンチ！】", "sub": "(全然進まない…)", "color": "#C0392B", "bg": "#FDEDEC", "header_bg": "#F9EBEA", "icon": "sad"}
 ]
 
 for i in range(3):
@@ -38,38 +42,70 @@ for i in range(3):
     action2 = st.sidebar.text_input(f"行動案 2 (柱 {i+1})", "「ばしょ」を変える", key=f"a2_{i}")
     columns_data.append({
         "label": label, "sub": sub, "action1": action1, "action2": action2,
-        "color": default_states[i]["color"], "bg": default_states[i]["bg"], "header_bg": default_states[i]["header_bg"]
+        "color": default_states[i]["color"], "bg": default_states[i]["bg"],
+        "header_bg": default_states[i]["header_bg"], "icon": default_states[i]["icon"]
     })
 
-# キャンバス準備
+# --- キャンバス初期化 ---
 img = Image.new("RGB", (1920, 1080), "#FAFAFA")
 draw = ImageDraw.Draw(img)
 
-# フォントサイズ設定
+# フォント設定
 try:
-    font_title = ImageFont.truetype(FONT_PATH, 55)
-    font_large = ImageFont.truetype(FONT_PATH, 42)
-    font_mid = ImageFont.truetype(FONT_PATH, 32)
-    font_small = ImageFont.truetype(FONT_PATH, 24)
+    font_title = ImageFont.truetype(FONT_PATH, 52)
+    font_large = ImageFont.truetype(FONT_PATH, 38)
+    font_mid = ImageFont.truetype(FONT_PATH, 30)
+    font_small = ImageFont.truetype(FONT_PATH, 22)
 except:
     font_title = font_large = font_mid = font_small = ImageFont.load_default()
 
-# 外枠フレーム（二重枠風）
+# テキスト中央揃え用ヘルパー関数
+def draw_centered_text(draw, bbox, text, font, fill):
+    x1, y1, x2, y2 = bbox
+    tb = draw.textbbox((0, 0), text, font=font)
+    w = tb[2] - tb[0]
+    h = tb[3] - tb[1]
+    x = x1 + (x2 - x1 - w) / 2
+    y = y1 + (y2 - y1 - h) / 2 - tb[1]
+    draw.text((x, y), text, font=font, fill=fill)
+
+# 外枠フレーム
 draw.rounded_rectangle([15, 15, 1905, 1065], radius=20, outline="#34495E", width=8)
 
 # 学年タグ
-draw.rounded_rectangle([40, 35, 300, 95], radius=30, fill="#27AE60")
-draw.text((65, 45), grade_text, fill="#FFFFFF", font=font_mid)
+draw.rounded_rectangle([40, 35, 260, 95], radius=30, fill="#27AE60")
+draw_centered_text(draw, [40, 35, 260, 95], grade_text, font_mid, "#FFFFFF")
 
-# タイトルリボン
-draw.rounded_rectangle([380, 35, 1540, 125], radius=25, fill="#F1C40F", outline="#D4AC0D", width=6)
-draw.text((430, 48), f"⏰ {title_time}分ちゅうかんチェック！", fill="#7D6608", font=font_title)
+# タイトルリボン（手書き風リボン端付き）
+r_box = [340, 35, 1420, 125]
+draw.polygon([(320, 80), (340, 35), (340, 125)], fill="#D4AC0D")
+draw.polygon([(1440, 80), (1420, 35), (1420, 125)], fill="#D4AC0D")
+draw.rounded_rectangle(r_box, radius=20, fill="#F1C40F", outline="#D4AC0D", width=6)
+draw_centered_text(draw, r_box, title_text, font_title, "#7D6608")
 
-# 中央の問いかけ吹き出し
-draw.rounded_rectangle([520, 145, 1400, 215], radius=20, fill="#FFFFFF", outline="#34495E", width=5)
-draw.text((560, 155), main_question, fill="#2C3E50", font=font_large)
+# 時計のイラスト描画
+cx, cy, r = 1370, 50, 25
+draw.ellipse([cx-r, cy-r, cx+r, cy+r], fill="#FFFFFF", outline="#34495E", width=4)
+draw.line([(cx, cy), (cx, cy-15)], fill="#34495E", width=4)
+draw.line([(cx, cy), (cx+10, cy)], fill="#34495E", width=4)
+draw.line([(cx-20, cy-20), (cx-28, cy-28)], fill="#34495E", width=4)
+draw.line([(cx+20, cy-20), (cx+28, cy-28)], fill="#34495E", width=4)
 
-# 3列分岐レイアウト
+# 中央の問いかけ
+q_box = [450, 145, 1470, 215]
+draw.rounded_rectangle(q_box, radius=20, fill="#FFFFFF", outline="#34495E", width=5)
+draw_centered_text(draw, q_box, main_question, font_large, "#2C3E50")
+
+# 先生画像の合成（アップロードがある場合）
+if uploaded_teacher is not None:
+    try:
+        teacher_img = Image.open(uploaded_teacher).convert("RGBA")
+        teacher_img.thumbnail((250, 220))
+        img.paste(teacher_img, (1600, 25), teacher_img)
+    except Exception:
+        pass
+
+# 3列レイアウト描画
 col_width = 560
 start_x = 80
 gap = 40
@@ -77,31 +113,47 @@ gap = 40
 for i, col in enumerate(columns_data):
     x = start_x + i * (col_width + gap)
 
-    # 1. 状態カード
-    draw.rounded_rectangle([x, 245, x + col_width, 365], radius=25, fill=col["header_bg"], outline=col["color"], width=6)
-    draw.text((x + 25, 260), col["label"], fill=col["color"], font=font_large)
-    draw.text((x + 30, 318), col["sub"], fill="#5D6D7E", font=font_small)
+    # 1. 状態ヘッダー枠
+    h_box = [x, 245, x + col_width, 365]
+    draw.rounded_rectangle(h_box, radius=25, fill=col["header_bg"], outline=col["color"], width=6)
+    
+    # アイコン描画
+    ic_x, ic_y = x + 50, 305
+    if col["icon"] == "smile":
+        draw.ellipse([ic_x-30, ic_y-30, ic_x+30, ic_y+30], fill="#F9E79F", outline=col["color"], width=4)
+        draw.arc([ic_x-18, ic_y-10, ic_x+18, ic_y+15], start=0, end=180, fill=col["color"], width=4)
+    elif col["icon"] == "star":
+        draw.polygon([(ic_x, ic_y-30), (ic_x+8, ic_y-10), (ic_x+30, ic_y-10), (ic_x+12, ic_y+5), (ic_x+18, ic_y+28), (ic_x, ic_y+15), (ic_x-18, ic_y+28), (ic_x-12, ic_y+5), (ic_x-30, ic_y-10), (ic_x-8, ic_y-10)], fill="#F9E79F", outline=col["color"])
+    elif col["icon"] == "sad":
+        draw.ellipse([ic_x-30, ic_y-30, ic_x+30, ic_y+30], fill="#F9E79F", outline=col["color"], width=4)
+        draw.arc([ic_x-18, ic_y, ic_x+18, ic_y+25], start=180, end=360, fill=col["color"], width=4)
 
-    # 矢印描画 (↓)
+    draw_centered_text(draw, [x + 80, 250, x + col_width, 310], col["label"], font_large, col["color"])
+    draw_centered_text(draw, [x + 80, 310, x + col_width, 355], col["sub"], font_small, "#5D6D7E")
+
+    # 矢印 (↓)
     arrow_x = x + col_width // 2
-    draw.polygon([(arrow_x - 18, 375), (arrow_x + 18, 375), (arrow_x, 405)], fill=col["color"])
+    draw.polygon([(arrow_x - 20, 375), (arrow_x + 20, 375), (arrow_x, 405)], fill=col["color"])
 
     # 2. 変えよう見出し
-    draw.rounded_rectangle([x, 415, x + col_width, 475], radius=20, fill="#FFFFFF", outline=col["color"], width=5)
-    draw.text((x + 120, 425), "【こうやって変えよう】", fill=col["color"], font=font_mid)
+    c_box = [x, 415, x + col_width, 475]
+    draw.rounded_rectangle(c_box, radius=20, fill="#FFFFFF", outline=col["color"], width=5)
+    draw_centered_text(draw, c_box, "【こうやって変えよう】", font_mid, col["color"])
 
-    # 矢印描画 (↓)
-    draw.polygon([(arrow_x - 18, 485), (arrow_x + 18, 485), (arrow_x, 510)], fill=col["color"])
+    # 矢印 (↓)
+    draw.polygon([(arrow_x - 20, 485), (arrow_x + 20, 485), (arrow_x, 510)], fill=col["color"])
 
     # 3. 行動選択肢 1
-    draw.rounded_rectangle([x, 525, x + col_width, 765], radius=20, fill=col["bg"], outline="#BDC3C7", width=4)
-    draw.text((x + 25, 545), f"• {col['action1']}", fill="#2C3E50", font=font_mid)
+    a1_box = [x, 525, x + col_width, 765]
+    draw.rounded_rectangle(a1_box, radius=20, fill=col["bg"], outline="#BDC3C7", width=4)
+    draw_centered_text(draw, a1_box, f"• {col['action1']}", font_mid, "#2C3E50")
 
     # 4. 行動選択肢 2
-    draw.rounded_rectangle([x, 785, x + col_width, 1025], radius=20, fill=col["bg"], outline="#BDC3C7", width=4)
-    draw.text((x + 25, 805), f"• {col['action2']}", fill="#2C3E50", font=font_mid)
+    a2_box = [x, 785, x + col_width, 1025]
+    draw.rounded_rectangle(a2_box, radius=20, fill=col["bg"], outline="#BDC3C7", width=4)
+    draw_centered_text(draw, a2_box, f"• {col['action2']}", font_mid, "#2C3E50")
 
-# アプリ画面への表示と保存
+# 画面表示
 st.image(img, use_container_width=True)
 buf = io.BytesIO()
 img.save(buf, format="PNG")
