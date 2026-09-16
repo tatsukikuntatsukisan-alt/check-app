@@ -56,7 +56,8 @@ for i, col in enumerate(columns_data):
     draw.rectangle([x, 760, x + col_width, 1000], fill="#FAFAFA", outline="#BDC3C7", width=3)
     draw.text((x + 20, 780), f"• {col['action2']}", fill="#2C3E50", font=font_mid)
 
-st.image(img, use_column_width=True)
+# エラー箇所を修正した表示
+st.image(img, use_container_width=True)
 buf = io.BytesIO()
 img.save(buf, format="PNG")
 st.download_button(label="📥 画像をダウンロード", data=buf.getvalue(), file_name="checklist.png", mime="image/png")
